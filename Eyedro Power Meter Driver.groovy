@@ -23,19 +23,13 @@ static String version() {
 preferences {
 	input("ipAddress", "string", title:"Eyedro Local IP Address", required: true, displayDuringSetup: true)
 	input("port", "number", title:"TCP Port (8080 by default)",defaultValue:"8080", required: true, displayDuringSetup: true)
-	input("sensors", "number", title:"Number of Power Sensors (2 or 4)", required: true, range: "2,4", displayDuringSetup: true)
+	input("sensors", "number", title:"Number of Power Sensors (2 or 4)", required: true, range: "2..4", displayDuringSetup: true)
 	input("pollInterval", "number", title:"Polling Interval in Seconds (between 5 and 60)", defaultValue:"10", range: "5..60", required: true, displayDuringSetup: true)
 	input("debugEnable", "bool", title: "Enable debug logging?", defaultValue: true)
 }
 
 metadata {
 	definition (name: "Eyedro Power Meter", namespace: "KISTech", author: "Kevin Summers") {
-		capability "Sensor"
-		capability "Power Meter"
-        capability "Voltage Measurement"
-		capability "Refresh"
-		capability "Polling"
-
 		attribute "currentVolts", "number"
 		attribute "currentAmps", "number"
 		attribute "currentWatts", "number"
@@ -55,7 +49,10 @@ void initialize() {
 
 void updated() {
     unschedule()
+    state.pollInterval = settings.pollInterval
+    state.sensors = settings.sensors
     if (settings.debugEnable == true) {
+        state.debugEnable = true
         runIn(60 * 60, debugOff)
     }
     startPoll()
@@ -64,6 +61,7 @@ void updated() {
 void debugOff() {
 	debug "Disabling debug logging after 1 hour"
 	device.updateSetting("debugEnable",[value:"false",type:"bool"])
+    state.debugEnable = false
 }
 
 void startPoll() {
@@ -143,21 +141,22 @@ void dataCallback(hubitat.device.HubResponse msg) {
     float current_Volts = (sensorA[1].toInteger() + sensorB[1].toInteger()) / 100
     float current_Amps = (sensorA[2].toInteger() + sensorB[2].toInteger()) / 1000
     float current_Watts = (sensorA[3].toInteger() + sensorB[3].toInteger()) / 1000
+    float solar_Volts = 0
+    float solar_Amps = 0
+    float solar_Watts = 0
     debug("Consumption : Volts : ${current_Volts} - Amps : ${current_Amps} - kiloWatts : ${current_Watts}")
     if (settings.sensors > 2) {
-        float solar_Volts = (sensorC[1].toInteger() + sensorD[1].toInteger()) / 100
-        float solar_Amps = (sensorC[2].toInteger() + sensorD[2].toInteger()) / 1000
-        float solar_Watts = (sensorC[3].toInteger() + sensorD[3].toInteger()) / 1000
+        solar_Volts = (sensorC[1].toInteger() + sensorD[1].toInteger()) / 100
+        solar_Amps = (sensorC[2].toInteger() + sensorD[2].toInteger()) / 1000
+        solar_Watts = (sensorC[3].toInteger() + sensorD[3].toInteger()) / 1000
         debug("Generation : Volts : ${solar_Volts} - Amps : ${solar_Amps} - kiloWatts : ${solar_Watts}")
     }
     sendEvent(name: "currentVolts", value: current_Volts, descriptionText: "Current Voltage (V)")
     sendEvent(name: "currentAmps", value: current_Amps, descriptionText: "Current Amps (A)")
     sendEvent(name: "currentWatts", value: current_Watts, descriptionText: "Current Watts (kW)")
-    if (settings.sensors > 2) {
-        sendEvent(name: "solarVolts", value: solar_Volts, descriptionText: "Solar Voltage (V)")
-        sendEvent(name: "solarAmps", value: solar_Amps, descriptiontext: "Solar Amps (A)")
-        sendEvent(name: "solarWatts", value: solar_Watts, descriptionText: "Solar Watts (kW)")
-    }
+    sendEvent(name: "solarVolts", value: solar_Volts, descriptionText: "Solar Voltage (V)")
+    sendEvent(name: "solarAmps", value: solar_Amps, descriptiontext: "Solar Amps (A)")
+    sendEvent(name: "solarWatts", value: solar_Watts, descriptionText: "Solar Watts (kW)")
 }
 
 void debug(String msg) {
