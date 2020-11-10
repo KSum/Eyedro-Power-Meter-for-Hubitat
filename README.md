@@ -31,6 +31,7 @@ Consumption - Adds the values together from sensors A and B
 * currentVolts (in Volts)
 * currentAmps (in Amps)
 * currentWatts (in kilowatts)
+
 Generation - Add the values together from sensors C and D
 * solarVolts (in Volts)
 * solarAmps (in Amps)
