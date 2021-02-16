@@ -13,34 +13,37 @@
  *	for the specific language governing permissions and limitations under the License.
  *
  * version 0.0.1 - Nov, 2020 - Initial release
+ * version 0.0.2 - Feb, 2021 - Fixed: Polling not always running
  *
  */
 
 static String version() {
-	return "0.0.1"
+	return "0.0.2"
 }
 
 preferences {
-	input("ipAddress", "string", title:"Eyedro Local IP Address", required: true, displayDuringSetup: true)
-	input("port", "number", title:"TCP Port (8080 by default)",defaultValue:"8080", required: true, displayDuringSetup: true)
-	input("sensors", "number", title:"Number of Power Sensors (2 or 4)", required: true, range: "2..4", displayDuringSetup: true)
-	input("pollInterval", "number", title:"Polling Interval in Seconds (between 5 and 60)", defaultValue:"10", range: "5..60", required: true, displayDuringSetup: true)
-	input("debugEnable", "bool", title: "Enable debug logging?", defaultValue: true)
+    input("ipAddress", "string", title:"Eyedro Local IP Address", required: true, displayDuringSetup: true)
+    input("port", "number", title:"TCP Port (8080 by default)",defaultValue:"8080", required: true, displayDuringSetup: true)
+    input("sensors", "number", title:"Number of Power Sensors (2 or 4)", required: true, range: "2..4", displayDuringSetup: true)
+    input("pollInterval", "number", title:"Polling Interval in Seconds (between 5 and 60)", defaultValue:"10", range: "5..60", required: true, displayDuringSetup: true)
+    input("debugEnable", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: true)
 }
 
 metadata {
-	definition (name: "Eyedro Power Meter", namespace: "KISTech", author: "Kevin Summers") {
-		attribute "currentVolts", "number"
-		attribute "currentAmps", "number"
-		attribute "currentWatts", "number"
-        attribute "solarVolts", "number"
-        attribute "solarAmps", "number"
-        attribute "solarWatts", "number"
-	}
+    definition (name: "Eyedro Power Meter", namespace: "KISTech", author: "Kevin Summers") {
+    capability "Sensor"
+    capability "Refresh"
+    attribute "currentVolts", "number"
+    attribute "currentAmps", "number"
+    attribute "currentWatts", "number"
+    attribute "solarVolts", "number"
+    attribute "solarAmps", "number"
+    attribute "solarWatts", "number"
+    }
 }
 
 void initialize() {
-    if (settings.ipAddress == null) {
+    if (ipAddress == null) {
         info "Device init: Please set device preferences"
     } else {
         updated()
@@ -48,45 +51,43 @@ void initialize() {
 }
 
 void updated() {
-    unschedule()
-    state.pollInterval = settings.pollInterval
-    state.sensors = settings.sensors
-    if (settings.debugEnable == true) {
-        state.debugEnable = true
+    unschedule(debugOff)
+    if (debugEnable == true) {
         runIn(60 * 60, debugOff)
     }
     startPoll()
 }
 
 void debugOff() {
-	debug "Disabling debug logging after 1 hour"
-	device.updateSetting("debugEnable",[value:"false",type:"bool"])
-    state.debugEnable = false
+    debug "Disabling debug logging after 1 hour"
+    debugEnable = false
 }
 
 void startPoll() {
-	unschedule(getData)
-    info("Eyedro - Polling every ${settings.pollInterval} seconds started")
-    runIn(settings.pollInterval, getData)
+    unschedule(getData)
+    info("Eyedro - Polling every ${pollInterval} seconds started")
+    runIn(pollInterval, getData)
+}
+
+void refresh() {
+    getData()
 }
 
 void getData() {
     unschedule(getData)
-	debug("Requesting data from Eyedro")
-	sendHubCommand(new hubitat.device.HubAction([
-		method: "GET",
-		path: "/getdata",
-		headers: [HOST:settings.ipAddress+":"+settings.port]
-		],
-        null,
-		[callback: dataCallback])
-	)
-    runIn(settings.pollInterval, getData)
+    debug("Requesting data from Eyedro")
+    sendHubCommand(new hubitat.device.HubAction([
+	method: "GET",
+	path: "/getdata",
+	headers: [HOST:ipAddress+":"+port]
+    ], null, [callback: dataCallback])
+    )
+    runIn(pollInterval, getData)
 }
 
 void dataCallback(hubitat.device.HubResponse msg) {
     def data = msg.json.toString()
-	info("new data: ${data}")
+    info("new data: ${data}")
     int a = data.indexOf("]", 9)
     int b = 0
     int c = 0
@@ -160,7 +161,7 @@ void dataCallback(hubitat.device.HubResponse msg) {
 }
 
 void debug(String msg) {
-    if (settings.debugEnable == true) {
+    if (debugEnable == true) {
         log.debug msg
     }
 }
