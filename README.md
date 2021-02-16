@@ -1,10 +1,7 @@
 # Eyedro Power Meter for Hubitat
-A driver and app to gather, store and display readings from an Eyedro Power Meter with either 2 or 4 sensors.
+A driver to gather, store and display readings from an Eyedro Power Meter with either 2 or 4 sensors.
 
-I made this to monitor power generation from our new Solar panel system and our consumption to ensure we are being billed properly.
-I also wanted to make cool little graphs to show guests and friends how the solar panels have impacted our electric bill.
-
-So far only the DRIVER is complete and functional.
+I made this to monitor power generation from our new Solar panel system and our consumption to ensure we are being billed properly, but also to use the data to create rules such as turning on certain energy hungry devices only when the Solar Panels are generating X amount more watts than what we are consuming, and turn those devices off when we're consuming more than we are generating.
 
 ## Driver Installation
 
@@ -37,4 +34,4 @@ Generation - Add the values together from sensors C and D
 * solarAmps (in Amps)
 * solarWatts (in kilowatts)
 
-More to come soon...
+More to come as needed..
